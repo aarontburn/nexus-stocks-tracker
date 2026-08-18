@@ -1,63 +1,86 @@
-// This is auto-replaced during export. DO NOT MODIFY.
-const MODULE_ID: string = "{EXPORTED_MODULE_ID}";
-// ---------------------------------------------------
-// ---------------------------------------------------
+// Sends information to the the process.
+const sendToProcess = (eventType: string, ...data: any[]): Promise<void> =>
+    window.ipc.sendToProcess(eventType, data);
 
-/**
- *  Sends information to the the process.
- * 
- *  @param eventType    The name of the event.
- *  @param data         Any data to send.
- */
-const sendToProcess = (eventType: string, ...data: any[]): Promise<void> => {
-    return window.ipc.sendToProcess(eventType, data);
-}
 
+const existingStockGraphs: HTMLElement[] = []
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+
+let resizeListener: (() => void) | undefined = undefined;
 window.ipc.onProcessEvent((eventType: string, data: any[]) => {
-    handleEvent(eventType, data);
-});
+    switch (eventType) {
+        case "stocks-list-changed": {
+            const stocksListAsString: string = data[0];
 
-const iframe: HTMLIFrameElement = document.getElementById('react-iframe') as HTMLIFrameElement;
-if (window.common.args.includes("--dev") && 
-    window.common.args.includes(`--last_exported_id:${MODULE_ID}`.toLowerCase())) {
-    // Or change this to wherever the react webserver is hosted.
-    iframe.src = "http://localhost:5173/"
-}
-
-function sendToIFrame(eventType: string, ...data: any[]) {
-    iframe.contentWindow!.postMessage({ eventType: eventType, data: data }, "*");
-}
-
-/**
- *  Handle events from the process.
- * 
- *  In a react context, simply passes the message to the react window.
- */
-const handleEvent = (eventType: string, data: any[]) => {
-    sendToIFrame(eventType, ...data);
-};
+            if (resizeListener) {
+                document.removeEventListener('resize', resizeListener);
+            }
 
 
+            existingStockGraphs.forEach(element => {
+                element.remove();
+            })
 
-/**
- *  React only: Listen to events from the react renderer and passes it to the process.
- */
-window.addEventListener("message", (event) => {
-    sendToProcess(event.data.eventType, ...event.data.data)
-});
+            const stocks: string[] = stocksListAsString.split(",").map(s => s.trim());
+
+            for (const stockAbbr of stocks) {
+                const url: string = `https://finance.yahoo.com/chart/${stockAbbr}/`;
+                const html: string = `
+                    <webview
+                        class="chart"
+                        id="chart-${stockAbbr}"
+                        src="${url}"
+                        preload="./preload.js"
+                    ></webview>
+                `
+                document.getElementById("stocks-grid")!.insertAdjacentHTML('beforeend', html);
+
+                const webview: HTMLElement | null = document.getElementById(`chart-${stockAbbr}`);
+                if (webview) {
+                    if (existingStockGraphs.length === 0) {
+                        // webview.addEventListener('dom-ready', () => {
+                        //     webview.openDevTools();
+                        // });
+                    }
+                    existingStockGraphs.push(webview);
+                }
 
 
-let accentColor: string | undefined = "";
-const observer = new MutationObserver(() => {
-    const value = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim();
-    if (value && value !== accentColor) {
-        accentColor = value;
-        sendToIFrame("accent-color-changed", value);
+
+                resizeListener = () => {
+                    const flexRows = getFlexRows(document.getElementById("stocks-grid")!);
+                    Array.from(document.getElementsByClassName("chart")).forEach((element) => {
+                        (element as HTMLElement).style.height = `calc(100%/${flexRows})`;
+                    });
+                };
+                resizeListener();
+
+                window.addEventListener('resize', resizeListener);
+            }
+            break;
+        }
+        default: {
+            console.warn(`Uncaught message: ${eventType} | ${data}`);
+        }
     }
 });
 
+sendToProcess("init");
 
-observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['style']
-});
+
+
+function getFlexRows(container: HTMLElement) {
+    const children = Array.from(container.children);
+    if (children.length === 0) return 0;
+
+    // Track unique top positions
+    const uniqueTops = new Set();
+
+    children.forEach(child => {
+        uniqueTops.add((child as HTMLElement).offsetTop);
+    });
+
+    return uniqueTops.size;
+}
