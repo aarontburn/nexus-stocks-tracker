@@ -13,8 +13,8 @@
     },
     "build": {
         "build-version": 1,
-        "excluded": ["electron.ts", "./renderer/react-wrapper"],
-        "included": ["./renderer/react-wrapper/react_module"],
+        "excluded": ["electron.ts"],
+        "included": [],
         "process": "./process/main.js",
         "replace": [
             {

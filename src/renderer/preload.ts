@@ -22,18 +22,49 @@ window.addEventListener('DOMContentLoaded', () => {
         document.querySelector('footer')?.remove();
         document.querySelector('.plots-container')?.remove();
         document.getElementsByClassName("menuContainer  tw-pt-[3px] tw-pb-[2px] yf-1uspju")[0]?.remove();
-        document.querySelector("#right-rail")?.remove();
+
+        const rightRail: HTMLElement | null = document.querySelector("#right-rail");
+        if (rightRail) {
+            rightRail.style.display = "none";
+        }
+
+
 
         const quoteLink: HTMLAnchorElement | null = document.querySelector("a[href^='/quote/']");
         if (quoteLink) {
             quoteLink.target = "_blank";
             quoteLink.rel = "noopener noreferrer";
         }
+
+        const headerContainer: HTMLElement | null = document.querySelector(".container.yf-p0rrgo");
+        if (headerContainer) {
+            headerContainer.style.display = "flex";
+            headerContainer.style.flexDirection = "column";
+        }
+
+        const quotePrice: HTMLElement | null = document.querySelector(".quote-price");
+        if (quotePrice) {
+            quotePrice.style.marginLeft = "auto";
+            quotePrice.style.marginRight = "1em";
+        }
+
+        const chartControls: HTMLDivElement | null = document.querySelector('[aria-label="Chart Controls"]');
+        if (chartControls) {
+            chartControls.style.marginLeft = "0";
+        }
+
+
+        Array.from(document.querySelector(".quote-price")!.querySelectorAll("*"))
+            .filter(element => element.tagName === "SPAN" && element.classList.contains("base"))
+            .forEach(element => (element as HTMLSpanElement).style.fontSize = "1.25rem")
     }
 
     removeElements();
     watch("header").then(removeElements);
+    watch("footer").then(removeElements);
     watch(".plots-head-up").then(removeElements);
+
+
 });
 
 async function watch(selector: string): Promise<HTMLElement> {
@@ -55,7 +86,7 @@ async function watch(selector: string): Promise<HTMLElement> {
             resolve(initialElement);
         }
 
-        const observer: MutationObserver = new MutationObserver((mutationList) => {
+        const observer: MutationObserver = new MutationObserver(() => {
             const observedElement: HTMLElement | null = lookupFunction(selector);
             if (observedElement) {
                 resolve(observedElement);

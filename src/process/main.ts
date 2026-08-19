@@ -1,6 +1,6 @@
 import * as path from "path";
 import { DataResponse, Process, Setting } from "@nexus-app/nexus-module-builder";
-import { BooleanSetting, StringSetting } from "@nexus-app/nexus-module-builder/settings/types";
+import { BooleanSetting, ChoiceSetting, StringSetting } from "@nexus-app/nexus-module-builder/settings/types";
 import { session } from "electron";
 
 // These is replaced to the ID specified in export-config.js during export. DO NOT MODIFY.
@@ -51,23 +51,39 @@ export default class SampleProcess extends Process {
     public registerSettings(): (Setting<unknown> | string)[] {
         return [
             new StringSetting(this)
-                .setDefault('')
+                .setDefault("")
                 .setName("Watched Stocks")
                 .setDescription("")
-                .setAccessID('stocks-list'),
+                .setAccessID("stocks-list"),
+
+            new ChoiceSetting(this)
+                .addOptions("Auto", "Vertical")
+                .setName("Layout")
+                .setDefault("Auto")
+                .setAccessID("layout"),
+
+            new BooleanSetting(this)
+                .setDefault(false)
+                .setName("Show Chart Controls")
+                .setAccessID('show-chart-controls')
+
 
         ];
     }
 
     // Fired whenever a setting is modified.
     public async onSettingModified(modifiedSetting: Setting<unknown>): Promise<void> {
-        if (modifiedSetting.getAccessID() === "stocks-list") {
-            this.sendToRenderer("stocks-list-changed",
-                this.getSettings().findSetting('stocks-list')?.getValue()
-            );
+        switch (modifiedSetting.getAccessID()) {
+            case "stocks-list":
+                this.sendToRenderer("stocks-list-changed", modifiedSetting.getValue());
+                break;
+
+            case "layout":
+                this.sendToRenderer("layout-changed", modifiedSetting.getValue());
+                break;
+            case "show-chart-controls":
+                this.sendToRenderer("show-chart-controls-changed", modifiedSetting.getValue());
+                break;
         }
     }
-
-
-
 }
