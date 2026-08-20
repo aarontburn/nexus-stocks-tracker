@@ -21,14 +21,15 @@ window.addEventListener('DOMContentLoaded', () => {
         document.querySelector('header')?.remove();
         document.querySelector('footer')?.remove();
         document.querySelector('.plots-container')?.remove();
+        document.querySelector('[data-tool="technical-events"]')?.remove();
+
+        // follow button
         document.getElementsByClassName("menuContainer  tw-pt-[3px] tw-pb-[2px] yf-1uspju")[0]?.remove();
 
         const rightRail: HTMLElement | null = document.querySelector("#right-rail");
         if (rightRail) {
             rightRail.style.display = "none";
         }
-
-
 
         const quoteLink: HTMLAnchorElement | null = document.querySelector("a[href^='/quote/']");
         if (quoteLink) {
@@ -53,10 +54,6 @@ window.addEventListener('DOMContentLoaded', () => {
             chartControls.style.marginLeft = "0";
         }
 
-
-        Array.from(document.querySelector(".quote-price")!.querySelectorAll("*"))
-            .filter(element => element.tagName === "SPAN" && element.classList.contains("base"))
-            .forEach(element => (element as HTMLSpanElement).style.fontSize = "1.25rem")
     }
 
     removeElements();

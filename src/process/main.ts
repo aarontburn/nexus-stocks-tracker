@@ -1,6 +1,6 @@
 import * as path from "path";
 import { DataResponse, Process, Setting } from "@nexus-app/nexus-module-builder";
-import { BooleanSetting, ChoiceSetting, StringSetting } from "@nexus-app/nexus-module-builder/settings/types";
+import { BooleanSetting, ChoiceSetting, NumberSetting, StringSetting } from "@nexus-app/nexus-module-builder/settings/types";
 import { session } from "electron";
 
 // These is replaced to the ID specified in export-config.js during export. DO NOT MODIFY.
@@ -12,7 +12,7 @@ const HTML_PATH: string = path.join(__dirname, "../renderer/index.html");
 const ICON_PATH: string | undefined = undefined; // path.join(__dirname, "...")
 
 
-export default class SampleProcess extends Process {
+export default class StocksProcess extends Process {
 
     public constructor() {
         super({
@@ -40,6 +40,11 @@ export default class SampleProcess extends Process {
                 this.initialize();
                 break;
             }
+            case "webview-ready": {
+                const webViewIndex: number = data[0];
+                this.onDisplaySettingChanged(webViewIndex);
+                break;
+            }
             default: {
                 console.info(`[${MODULE_NAME}] Unhandled event: eventType: ${eventType} | data: ${data}`);
                 break;
@@ -62,28 +67,86 @@ export default class SampleProcess extends Process {
                 .setDefault("Auto")
                 .setAccessID("layout"),
 
+            "Display Settings",
+            new BooleanSetting(this)
+                .setDefault(true)
+                .setName("Hide Chart Controls")
+                .setDescription("Hides chart configurations, including graph layout, comparisons, and draw tools.")
+                .setAccessID('hide-chart-controls'),
+
             new BooleanSetting(this)
                 .setDefault(false)
-                .setName("Show Chart Controls")
-                .setAccessID('show-chart-controls')
+                .setName("Hide Date Controls")
+                .setAccessID('hide-date-controls'),
 
+            new BooleanSetting(this)
+                .setDefault(false)
+                .setName("Hide Quote Metadata")
+                .setDescription("Hides certain metadata about the stock (e.g. 'NYSEArca - BOATS Real Time Price - USD')")
+                .setAccessID('hide-quote-metadata'),
 
+            new BooleanSetting(this)
+                .setDefault(true)
+                .setName("Hide Full Stock Name")
+                .setDescription("Hides the full name of the stock, leaving only the abbreviation (e.g. 'Microsoft (MSFT)' -> 'MSFT')")
+                .setAccessID('hide-full-name'),
+
+            new NumberSetting(this)
+                .setRange(0, 50)
+                .setStep(2)
+                .setDefault(14)
+                .setName("Name Font Size (px)")
+                .setAccessID('name-font-size'),
+
+            new NumberSetting(this)
+                .setRange(0, 50)
+                .setStep(2)
+                .setDefault(14)
+                .setName("Quote Price Font Size (px)")
+                .setAccessID('quote-font-size'),
         ];
     }
 
-    // Fired whenever a setting is modified.
     public async onSettingModified(modifiedSetting: Setting<unknown>): Promise<void> {
         switch (modifiedSetting.getAccessID()) {
             case "stocks-list":
                 this.sendToRenderer("stocks-list-changed", modifiedSetting.getValue());
                 break;
-
             case "layout":
                 this.sendToRenderer("layout-changed", modifiedSetting.getValue());
                 break;
-            case "show-chart-controls":
-                this.sendToRenderer("show-chart-controls-changed", modifiedSetting.getValue());
+
+            case "name-font-size":
+            case "quote-font-size":
+            case "hide-full-name":
+            case "hide-date-controls":
+            case "hide-chart-controls":
+            case "hide-quote-metadata":
+                this.onDisplaySettingChanged();
                 break;
         }
+    }
+
+    private onDisplaySettingChanged(webViewIndex?: number) {
+        const output: { [settingName: string]: any } = {}
+
+        const settingsToRefresh = [
+            'hide-chart-controls',
+            'hide-date-controls',
+            'hide-quote-metadata',
+            'hide-full-name',
+            "name-font-size",
+            "quote-font-size"
+        ];
+
+        for (const settingName of settingsToRefresh) {
+            const settingValue = this.getSettings().findSetting(settingName)?.getValue();
+            if (settingValue === undefined) {
+                console.error(`[${MODULE_NAME}] Could not locate setting value ${settingName}`);
+                continue;
+            }
+            output[settingName + "-changed"] = settingValue
+        }
+        this.sendToRenderer(`settings-changed`, output, webViewIndex);
     }
 }
