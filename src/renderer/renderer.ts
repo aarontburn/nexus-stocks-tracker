@@ -5,7 +5,6 @@ const sendToProcess = (eventType: string, ...data: any[]): Promise<void> =>
 
 let existingStockGraphs: { element: HTMLElement, eventNameToCssKey: { [eventName: string]: string } }[] = []
 
-
 const resizeListener = () => {
     const flexRows = getFlexRows(document.getElementById("stocks-grid")!);
     Array.from(document.getElementsByClassName("chart")).forEach((element) => {
@@ -26,25 +25,25 @@ window.ipc.onProcessEvent((eventType: string, data: any[]) => {
 
             const booleanToCSS = (settingChangeEventName: string) => {
                 return ({
-                    "hide-chart-controls-changed": (`
+                    "setting-hide-chart-controls": (`
                         [aria-label="Chart Controls"] {
                             display: none !important;
                         }
                     `),
 
-                    "hide-date-controls-changed": (`
+                    "setting-hide-date-controls": (`
                         .bottom-bar {
                             display: none !important;
                         }
                     `),
 
-                    "hide-quote-metadata-changed": (`
+                    "setting-hide-quote-metadata": (`
                         .exchange {
                             display: none !important;
                         }
                     `),
 
-                    "hide-full-name-changed": (`
+                    "setting-hide-full-name": (`
                         .heading {
                             font-size: 0 !important;
                         }
@@ -54,13 +53,13 @@ window.ipc.onProcessEvent((eventType: string, data: any[]) => {
 
             const numberToCSS = (settingChangeEventName: string, value: number) => {
                 return ({
-                    "name-font-size-changed": (`
+                    "setting-name-font-size": (`
                         [href^='/quote/'] {
                             font-size: ${value}px !important;
                         }
                     `),
 
-                    "quote-font-size-changed": (`
+                    "setting-quote-font-size": (`
                         .quote-price .base {
                             font-size: ${value}px !important;
                         }
@@ -68,7 +67,20 @@ window.ipc.onProcessEvent((eventType: string, data: any[]) => {
                 }[settingChangeEventName]);
             };
 
-            const updateChartControls = async (obj: typeof existingStockGraphs[number], changeEventName: string, value: any) => {
+            const appendChartCSS = async (obj: typeof existingStockGraphs[number], changeEventName: string, value: any) => {
+                if (changeEventName === 'setting-is-first-boot') {
+                    if (value) {
+                        // Not sure if this logic is even needed, indicators don't save without a partition specified
+                        // through different sessions unless we have a unique partition per graph
+                        (obj.element as any).executeJavaScript(`
+                            const myChartLayout = JSON.parse(localStorage.getItem("myChartLayout"));
+                            localStorage.setItem('myChartLayout', JSON.stringify({...myChartLayout, studies: {}}));
+                        `);
+                    }
+                    return;
+                }
+
+
                 try {
                     if (obj.eventNameToCssKey[changeEventName]) {
                         await (obj.element as any).removeInsertedCSS(obj.eventNameToCssKey[changeEventName]);
@@ -77,10 +89,16 @@ window.ipc.onProcessEvent((eventType: string, data: any[]) => {
 
                     if (typeof value === "boolean") {
                         if (value) {
-                            obj.eventNameToCssKey[changeEventName] = await (obj.element as any).insertCSS(booleanToCSS(changeEventName))
+                            const css: string | undefined = booleanToCSS(changeEventName);
+                            if (css) {
+                                obj.eventNameToCssKey[changeEventName] = await (obj.element as any).insertCSS(css);
+                            }
                         }
                     } else if (typeof value === "number") {
-                        obj.eventNameToCssKey[changeEventName] = await (obj.element as any).insertCSS(numberToCSS(changeEventName, value))
+                        const css: string | undefined = numberToCSS(changeEventName, value);
+                        if (css) {
+                            obj.eventNameToCssKey[changeEventName] = await (obj.element as any).insertCSS(css);
+                        }
                     }
                 } catch (e) {
                     console.warn(e)
@@ -89,14 +107,14 @@ window.ipc.onProcessEvent((eventType: string, data: any[]) => {
 
             for (const settingChangeEventName in settings) {
                 if (typeof index === "number") {
-                    updateChartControls(
+                    appendChartCSS(
                         existingStockGraphs[index],
                         settingChangeEventName,
                         settings[settingChangeEventName]
                     );
 
                 } else if (index === undefined) {
-                    existingStockGraphs.forEach((element) => updateChartControls(
+                    existingStockGraphs.forEach((element) => appendChartCSS(
                         element,
                         settingChangeEventName,
                         settings[settingChangeEventName])
@@ -133,6 +151,7 @@ window.ipc.onProcessEvent((eventType: string, data: any[]) => {
                         id="chart-${stockAbbr}-${count}"
                         src="${url}"
                         preload="./preload.js"
+                        partition="persist:{EXPORTED_MODULE_ID}_${count}"
                     ></webview>
                 `
                 document.getElementById("stocks-grid")!.insertAdjacentHTML('beforeend', html);
@@ -163,9 +182,10 @@ sendToProcess("init");
 
 function getFlexRows(container: HTMLElement): number {
     const children = Array.from(container.children);
-    if (children.length === 0) return 0;
+    if (children.length === 0) {
+        return 0
+    };
 
-    // Track unique top positions
     const uniqueTops = new Set();
 
     children.forEach(child => {

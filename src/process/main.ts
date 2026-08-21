@@ -33,6 +33,15 @@ export default class StocksProcess extends Process {
         );
     }
 
+    public async onExit(): Promise<void> {
+        const isFirstBootSetting: Setting<unknown> | undefined = this.getSettings().findSetting("is-first-boot");
+        if (isFirstBootSetting?.getValue()) {
+            await isFirstBootSetting.setValue(false);
+            await this.fileManager.writeSettingsToStorage();
+        }
+
+    }
+
     // Receive events sent from the renderer.
     public async handleEvent(eventType: string, data: any[]): Promise<any> {
         switch (eventType) {
@@ -107,6 +116,15 @@ export default class StocksProcess extends Process {
         ];
     }
 
+    public registerInternalSettings(): Setting<unknown>[] {
+        return [
+            new BooleanSetting(this)
+                .setName('is-first-boot')
+                .setDefault(true)
+                .setAccessID("is-first-boot")
+        ]
+    }
+
     public async onSettingModified(modifiedSetting: Setting<unknown>): Promise<void> {
         switch (modifiedSetting.getAccessID()) {
             case "stocks-list":
@@ -136,7 +154,8 @@ export default class StocksProcess extends Process {
             'hide-quote-metadata',
             'hide-full-name',
             "name-font-size",
-            "quote-font-size"
+            "quote-font-size",
+            "is-first-boot",
         ];
 
         for (const settingName of settingsToRefresh) {
@@ -145,7 +164,7 @@ export default class StocksProcess extends Process {
                 console.error(`[${MODULE_NAME}] Could not locate setting value ${settingName}`);
                 continue;
             }
-            output[settingName + "-changed"] = settingValue
+            output["setting-" + settingName] = settingValue
         }
         this.sendToRenderer(`settings-changed`, output, webViewIndex);
     }
