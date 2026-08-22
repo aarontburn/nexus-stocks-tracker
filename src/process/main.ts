@@ -24,7 +24,7 @@ export default class StocksProcess extends Process {
     }
 
     public async initialize(): Promise<void> {
-        super.initialize(); // This should be called.
+        super.initialize();
 
         this.sendToRenderer("stocks-list-changed",
             this.getSettings().findSetting('stocks-list')?.getValue()

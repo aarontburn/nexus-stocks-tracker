@@ -98,10 +98,10 @@ window.ipc.onProcessEvent((eventType: string, data: any[]) => {
                     if (value) {
                         // Not sure if this logic is even needed, indicators don't save without a partition specified
                         // through different sessions unless we have a unique partition per graph
-                        obj.element.executeJavaScript(`
-                            const myChartLayout = JSON.parse(localStorage.getItem("myChartLayout"));
-                            localStorage.setItem('myChartLayout', JSON.stringify({...myChartLayout, studies: {}}));
-                        `);
+                        // obj.element.executeJavaScript(`
+                        //     const myChartLayout = JSON.parse(localStorage.getItem("myChartLayout"));
+                        //     localStorage.setItem('myChartLayout', JSON.stringify({...myChartLayout, studies: {}}));
+                        // `);
                     }
                     return;
                 }
