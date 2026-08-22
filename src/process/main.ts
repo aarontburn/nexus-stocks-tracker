@@ -1,25 +1,17 @@
 import * as path from "path";
-import { DataResponse, Process, Setting } from "@nexus-app/nexus-module-builder";
-import { BooleanSetting } from "@nexus-app/nexus-module-builder/settings/types";
+import { Process, Setting } from "@nexus-app/nexus-module-builder";
+import { BooleanSetting, ChoiceSetting, NumberSetting, StringSetting } from "@nexus-app/nexus-module-builder/settings/types";
 
-// These is replaced to the ID specified in export-config.js during export. DO NOT MODIFY.
 const MODULE_ID: string = "{EXPORTED_MODULE_ID}";
 const MODULE_NAME: string = "{EXPORTED_MODULE_NAME}";
 // ---------------------------------------------------
 const HTML_PATH: string = path.join(__dirname, "../renderer/index.html");
 
-// If you have an icon, specify the relative path from this file.
-//      Can be a .png, .jpeg, .jpg, or .svg
-const ICON_PATH: string | undefined = undefined; // path.join(__dirname, "...")
+const ICON_PATH: string | undefined = path.join(__dirname, "icon.svg");
 
 
-export default class SampleProcess extends Process {
+export default class StocksProcess extends Process {
 
-    /**
-     *  The constructor. At this point, the renderer may not be fully initialized yet;
-     *  therefore do not do any logic important to the renderer and 
-     *  instead put that logic in initialize().
-     */
     public constructor() {
         super({
             moduleID: MODULE_ID,
@@ -31,15 +23,21 @@ export default class SampleProcess extends Process {
         });
     }
 
-    // The entry point of the module. Will be called once the renderer sends the 'init' signal.
     public async initialize(): Promise<void> {
         super.initialize(); // This should be called.
 
-        this.refreshAllSettings();
-        // Request the accent color from the built-in 'Settings' module and send it to the renderer.
-        this.requestExternal("nexus.Settings", "get-accent-color").then((value: DataResponse) => {
-            this.sendToRenderer("accent-color-changed", value.body)
-        });
+        this.sendToRenderer("stocks-list-changed",
+            this.getSettings().findSetting('stocks-list')?.getValue()
+        );
+    }
+
+    public async onExit(): Promise<void> {
+        const isFirstBootSetting: Setting<unknown> | undefined = this.getSettings().findSetting("is-first-boot");
+        if (isFirstBootSetting?.getValue()) {
+            await isFirstBootSetting.setValue(false);
+            await this.fileManager.writeSettingsToStorage();
+        }
+
     }
 
     // Receive events sent from the renderer.
@@ -49,11 +47,27 @@ export default class SampleProcess extends Process {
                 this.initialize();
                 break;
             }
-            case "count": {
-                console.info(`[${MODULE_NAME}] Received 'count': ${data[0]}`);
+            case "log": {
+                const logLevel: "log" | "info" | "error" | "warn" = data[0];
+
+                const logFunction = () => {
+                    switch (logLevel) {
+                        case "log": return console.log
+                        case "info": return console.info
+                        case "error": return console.error
+                        case "warn": return console.warn
+                        default: return console.log
+                    }
+                }
+
+                logFunction()(`[${MODULE_ID}] (renderer) ${data[1]}`);
                 break;
             }
-
+            case "webview-ready": {
+                const webViewIndex: number = data[0];
+                this.onDisplaySettingChanged(webViewIndex);
+                break;
+            }
             default: {
                 console.info(`[${MODULE_NAME}] Unhandled event: eventType: ${eventType} | data: ${data}`);
                 break;
@@ -64,23 +78,124 @@ export default class SampleProcess extends Process {
     // Add settings/section headers.
     public registerSettings(): (Setting<unknown> | string)[] {
         return [
-            "Sample Setting Group",
+            new StringSetting(this)
+                .setDefault("NVDA, GOOGL, AMZN, META")
+                .setName("Ticker Symbols")
+                .setDescription("Abbreviated stock names, separated by commas (e.g. NVDA, GOOGL, AMZN)")
+                .setAccessID("stocks-list"),
+
+
+            "Display Settings",
+            new ChoiceSetting(this)
+                .addOptions("Auto", "Vertical")
+                .useDropdown()
+                .setName("Layout")
+                .setDescription("Auto: Arrange charts in a grid if possible. Vertical: Arrange charts vertically.")
+                .setDefault("Auto")
+                .setAccessID("layout"),
+
+            new BooleanSetting(this)
+                .setDefault(true)
+                .setName("Hide Chart Controls")
+                .setDescription("Hides chart configurations, including graph layout, comparisons, and draw tools.")
+                .setAccessID('hide-chart-controls'),
+
             new BooleanSetting(this)
                 .setDefault(false)
-                .setName("Sample Toggle Setting")
-                .setDescription("An example of a true/false setting.")
-                .setAccessID('sample_bool'),
+                .setName("Hide Date Controls")
+                .setDescription("Hides the date and interval control toolbar.")
+                .setAccessID('hide-date-controls'),
 
+            new BooleanSetting(this)
+                .setDefault(false)
+                .setName("Hide Quote Metadata")
+                .setDescription("Hides certain metadata about the stock (e.g. 'NYSEArca - BOATS Real Time Price - USD')")
+                .setAccessID('hide-quote-metadata'),
+
+            new BooleanSetting(this)
+                .setDefault(true)
+                .setName("Hide Full Stock Name")
+                .setDescription("Hides the full name of the stock, leaving only the abbreviation (e.g. 'Microsoft (MSFT)' -> 'MSFT')")
+                .setAccessID('hide-full-name'),
+
+            new NumberSetting(this)
+                .setRange(0, 50)
+                .setStep(2)
+                .setDefault(14)
+                .setName("Name Font Size")
+                .setDescription("Adjust the font size of the ticker symbol (px)")
+                .setAccessID('name-font-size'),
+
+            new NumberSetting(this)
+                .setRange(0, 50)
+                .setStep(2)
+                .setDefault(14)
+                .setName("Quote Price Font Size")
+                .setDescription("Adjust the font size of the quote price (px)")
+                .setAccessID('quote-font-size'),
+
+            new BooleanSetting(this)
+                .setDefault(false)
+                .setName("Disable Chart Mouse Events")
+                .setDescription("Useful for touchscreen dashboards.")
+                .setAccessID("disable-chart-mouse-events")
         ];
     }
 
-    // Fired whenever a setting is modified.
+    public registerInternalSettings(): Setting<unknown>[] {
+        return [
+            new BooleanSetting(this)
+                .setName('is-first-boot')
+                .setDefault(true)
+                .setAccessID("is-first-boot")
+        ]
+    }
+
     public async onSettingModified(modifiedSetting: Setting<unknown>): Promise<void> {
-        if (modifiedSetting.getAccessID() === "sample_bool") {
-            this.sendToRenderer('sample-setting', modifiedSetting.getValue());
+        switch (modifiedSetting.getAccessID()) {
+            case "stocks-list":
+                this.sendToRenderer("stocks-list-changed", modifiedSetting.getValue());
+                break;
+            case "layout":
+                this.sendToRenderer("layout-changed", modifiedSetting.getValue());
+                break;
+
+            case "disable-chart-mouse-events":
+                this.sendToRenderer("disable-chart-mouse-events-changed", modifiedSetting.getValue());
+                break;
+
+            case "name-font-size":
+            case "quote-font-size":
+            case "hide-full-name":
+            case "hide-date-controls":
+            case "hide-chart-controls":
+            case "hide-quote-metadata":
+                this.onDisplaySettingChanged();
+                break;
         }
     }
 
+    private onDisplaySettingChanged(webViewIndex?: number) {
+        const output: { [settingName: string]: any } = {}
 
+        const settingsToRefresh = [
+            'hide-chart-controls',
+            'hide-date-controls',
+            'hide-quote-metadata',
+            'hide-full-name',
+            "name-font-size",
+            "quote-font-size",
+            "is-first-boot",
+        ];
 
+        for (const settingName of settingsToRefresh) {
+            const settingValue = this.getSettings().findSetting(settingName)?.getValue();
+            if (settingValue === undefined) {
+                console.error(`[${MODULE_NAME}] Could not locate setting value ${settingName}`);
+                continue;
+            }
+            output["setting-" + settingName] = settingValue
+        }
+        this.sendToRenderer(`chart-settings-changed`, output, webViewIndex);
+    }
 }

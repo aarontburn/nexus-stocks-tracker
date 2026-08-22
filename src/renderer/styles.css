@@ -1,0 +1,53 @@
+:root {
+
+
+    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+
+    color: rgba(255, 255, 255, 0.87);
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+
+    --chart-pointer-events: "auto";
+    --min-chart-width: 770px;
+}
+
+html {
+    scrollbar-color: var(--accent-color) black;
+}
+
+html,
+body,
+#app {
+    height: 100%;
+    width: 100%;
+    background-color: black;
+}
+
+body {
+    margin: 0;
+    display: flex;
+}
+
+#stocks-grid {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: stretch;
+    align-content: flex-start;
+    height: 100%;
+}
+
+.chart {
+    min-width: var(--min-chart-width);
+    flex: 1 1 770px;
+    min-height: 250px;
+    height: auto;
+    outline: 2px solid var(--accent-color);
+    pointer-events: var(--chart-pointer-events);
+}
