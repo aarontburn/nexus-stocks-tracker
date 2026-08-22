@@ -3,9 +3,13 @@
     "id": "aarontburn.Stock_Tracker",
     "version": "1.0.0",
     "author": "aarontburn",
-    "description": "A template to create a module for Nexus using React.",
+    "description": "Monitor multiple stocks in a dashboard, powered by Yahoo! Finance.",
     "link": "https://github.com/aarontburn/nexus-stock-tracker",
-    "platforms": ["win32", "linux", "darwin"],
+    "platforms": [
+        "win32",
+        "linux",
+        "darwin"
+    ],
     "author-id": "683193056e5989838dcf772c",
     "git-latest": {
         "git-username": "aarontburn",
@@ -13,19 +17,47 @@
     },
     "build": {
         "build-version": 1,
-        "excluded": ["electron.ts"],
+        "excluded": [
+            "electron.ts"
+        ],
         "included": [],
         "process": "./process/main.js",
         "replace": [
             {
                 "from": "{EXPORTED_MODULE_ID}",
                 "to": "%id%",
-                "at": ["./process/main.ts", "./renderer/renderer.ts"]
+                "at": [
+                    "./process/main.ts",
+                    "./renderer/renderer.ts"
+                ]
             },
             {
                 "from": "{EXPORTED_MODULE_NAME}",
                 "to": "%name%",
-                "at": ["./process/main.ts"]
+                "at": [
+                    "./process/main.ts"
+                ]
+            },
+            {
+                "from": "\"{START_RENDERER}\"",
+                "to": "(() => {",
+                "at": [
+                    "./renderer/renderer.ts"
+                ]
+            },
+            {
+                "from": "\"{END_RENDERER}\"",
+                "to": "})()",
+                "at": [
+                    "./renderer/renderer.ts"
+                ]
+            },
+            {
+                "from": "import type",
+                "to": "// import type",
+                "at": [
+                    "./renderer/renderer.ts"
+                ]
             }
         ]
     }

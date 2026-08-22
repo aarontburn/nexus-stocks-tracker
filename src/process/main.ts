@@ -1,15 +1,13 @@
 import * as path from "path";
-import { DataResponse, Process, Setting } from "@nexus-app/nexus-module-builder";
+import { Process, Setting } from "@nexus-app/nexus-module-builder";
 import { BooleanSetting, ChoiceSetting, NumberSetting, StringSetting } from "@nexus-app/nexus-module-builder/settings/types";
-import { session } from "electron";
 
-// These is replaced to the ID specified in export-config.js during export. DO NOT MODIFY.
 const MODULE_ID: string = "{EXPORTED_MODULE_ID}";
 const MODULE_NAME: string = "{EXPORTED_MODULE_NAME}";
 // ---------------------------------------------------
 const HTML_PATH: string = path.join(__dirname, "../renderer/index.html");
 
-const ICON_PATH: string | undefined = undefined; // path.join(__dirname, "...")
+const ICON_PATH: string | undefined = path.join(__dirname, "icon.svg");
 
 
 export default class StocksProcess extends Process {
@@ -49,6 +47,22 @@ export default class StocksProcess extends Process {
                 this.initialize();
                 break;
             }
+            case "log": {
+                const logLevel: "log" | "info" | "error" | "warn" = data[0];
+
+                const logFunction = () => {
+                    switch (logLevel) {
+                        case "log": return console.log
+                        case "info": return console.info
+                        case "error": return console.error
+                        case "warn": return console.warn
+                        default: return console.log
+                    }
+                }
+
+                logFunction()(`[${MODULE_ID}] (renderer) ${data[1]}`);
+                break;
+            }
             case "webview-ready": {
                 const webViewIndex: number = data[0];
                 this.onDisplaySettingChanged(webViewIndex);
@@ -65,18 +79,21 @@ export default class StocksProcess extends Process {
     public registerSettings(): (Setting<unknown> | string)[] {
         return [
             new StringSetting(this)
-                .setDefault("")
-                .setName("Watched Stocks")
-                .setDescription("")
+                .setDefault("NVDA, GOOGL, AMZN, META")
+                .setName("Ticker Symbols")
+                .setDescription("Abbreviated stock names, separated by commas (e.g. NVDA, GOOGL, AMZN)")
                 .setAccessID("stocks-list"),
 
+
+            "Display Settings",
             new ChoiceSetting(this)
                 .addOptions("Auto", "Vertical")
+                .useDropdown()
                 .setName("Layout")
+                .setDescription("Auto: Arrange charts in a grid if possible. Vertical: Arrange charts vertically.")
                 .setDefault("Auto")
                 .setAccessID("layout"),
 
-            "Display Settings",
             new BooleanSetting(this)
                 .setDefault(true)
                 .setName("Hide Chart Controls")
@@ -86,6 +103,7 @@ export default class StocksProcess extends Process {
             new BooleanSetting(this)
                 .setDefault(false)
                 .setName("Hide Date Controls")
+                .setDescription("Hides the date and interval control toolbar.")
                 .setAccessID('hide-date-controls'),
 
             new BooleanSetting(this)
@@ -104,15 +122,23 @@ export default class StocksProcess extends Process {
                 .setRange(0, 50)
                 .setStep(2)
                 .setDefault(14)
-                .setName("Name Font Size (px)")
+                .setName("Name Font Size")
+                .setDescription("Adjust the font size of the ticker symbol (px)")
                 .setAccessID('name-font-size'),
 
             new NumberSetting(this)
                 .setRange(0, 50)
                 .setStep(2)
                 .setDefault(14)
-                .setName("Quote Price Font Size (px)")
+                .setName("Quote Price Font Size")
+                .setDescription("Adjust the font size of the quote price (px)")
                 .setAccessID('quote-font-size'),
+
+            new BooleanSetting(this)
+                .setDefault(false)
+                .setName("Disable Chart Mouse Events")
+                .setDescription("Useful for touchscreen dashboards.")
+                .setAccessID("disable-chart-mouse-events")
         ];
     }
 
@@ -132,6 +158,10 @@ export default class StocksProcess extends Process {
                 break;
             case "layout":
                 this.sendToRenderer("layout-changed", modifiedSetting.getValue());
+                break;
+
+            case "disable-chart-mouse-events":
+                this.sendToRenderer("disable-chart-mouse-events-changed", modifiedSetting.getValue());
                 break;
 
             case "name-font-size":
@@ -166,6 +196,6 @@ export default class StocksProcess extends Process {
             }
             output["setting-" + settingName] = settingValue
         }
-        this.sendToRenderer(`settings-changed`, output, webViewIndex);
+        this.sendToRenderer(`chart-settings-changed`, output, webViewIndex);
     }
 }

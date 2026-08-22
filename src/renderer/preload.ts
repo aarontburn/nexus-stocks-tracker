@@ -22,6 +22,7 @@ window.addEventListener('DOMContentLoaded', () => {
         document.querySelector('footer')?.remove();
         document.querySelector('.plots-container')?.remove();
         document.querySelector('[data-tool="technical-events"]')?.remove();
+        document.querySelector('.feature-modal')?.remove()
 
         // follow button
         document.getElementsByClassName("menuContainer  tw-pt-[3px] tw-pb-[2px] yf-1uspju")[0]?.remove();

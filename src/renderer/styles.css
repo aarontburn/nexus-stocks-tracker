@@ -1,4 +1,6 @@
 :root {
+
+
     font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
     line-height: 1.5;
     font-weight: 400;
@@ -8,6 +10,13 @@
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+
+    --chart-pointer-events: "auto";
+    --min-chart-width: 770px;
+}
+
+html {
+    scrollbar-color: var(--accent-color) black;
 }
 
 html,
@@ -23,10 +32,6 @@ body {
     display: flex;
 }
 
-webview {
-    height: 100%;
-}
-
 #stocks-grid {
     min-height: 100vh;
     display: flex;
@@ -39,9 +44,10 @@ webview {
 }
 
 .chart {
-    min-width: 770px;
+    min-width: var(--min-chart-width);
     flex: 1 1 770px;
     min-height: 250px;
     height: auto;
     outline: 2px solid var(--accent-color);
+    pointer-events: var(--chart-pointer-events);
 }
