@@ -21,8 +21,6 @@ const waitForElement = async (elementId: string): Promise<HTMLElement | null> =>
 }
 
 ipcRenderer.on('change-all-settings', async (_, settings: { [settingName: string]: any }) => {
-    console.log(settings)
-
     const settingButton: HTMLInputElement | null = document.querySelector('[aria-label="Settings"]');
     const settingContainer = document.querySelector('[data-tool="settings"]')?.querySelector(".dialog-container")
 
@@ -42,7 +40,7 @@ ipcRenderer.on('change-all-settings', async (_, settings: { [settingName: string
             const nameToId = {
                 "Linear": "linear",
                 "Logarithmic": "log",
-                "Percent": "percent",
+                "Percentage": "percent",
             };
             const value: keyof typeof nameToId = settings[settingChangeEventName];
             document.getElementById(nameToId[value])?.click();
@@ -72,6 +70,17 @@ ipcRenderer.on('change-all-settings', async (_, settings: { [settingName: string
     if (!settingContainer.classList.contains('tw-hidden')) {
         settingButton.click();
     }
+
+    // const crosshairX: HTMLElement | null = document.getElementsByClassName("stx_crosshair stx_crosshair_x crossX")[0] as HTMLElement;
+    // const crosshairY: HTMLElement | null = document.getElementsByClassName("stx_crosshair stx_crosshair_y crossY")[0] as HTMLElement;
+
+    // if (crosshairX) {
+    //     crosshairX.style.left = "-100px";
+    // }
+
+    // if (crosshairY) {
+    //     crosshairY.style.top = "-100px";
+    // }
 });
 
 
@@ -84,7 +93,7 @@ if (!window.localStorage.getItem("isFirstBootNexus")) {
         flipped: false,
         volumeUnderlay: true,
         adj: true,
-        crosshair: true,
+        crosshair: false,
         chartType: "mountain",
         extended: false,
         marketSessions: {},
@@ -248,8 +257,18 @@ window.addEventListener('DOMContentLoaded', () => {
     watch("header").then(removeElements);
     watch("footer").then(removeElements);
     watch(".plots-head-up").then(removeElements);
+    watch(".stx_sticky.mSticky").then(removeElements);
 
-
+    (async () => {
+        while (true) {
+            if (document.getElementsByClassName("loading-container").length) {
+                await sleep(500);
+            } else {
+                ipcRenderer.sendToHost("ready");
+                break;
+            }
+        }
+    })();
 });
 
 async function watch(selector: string): Promise<HTMLElement> {

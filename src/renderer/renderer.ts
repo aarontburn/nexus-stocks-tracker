@@ -7,7 +7,7 @@ const sendToProcess = (eventType: string, ...data: any[]): Promise<void> =>
     window.ipc.sendToProcess(eventType, data);
 
 
-let existingStockGraphs: { element: WebviewTag, eventNameToCssKey: { [eventName: string]: string } }[] = []
+let existingStockGraphs: { element: WebviewTag, eventNameToCssKey: { [eventName: string]: string } }[] = [];
 
 
 const resizeListener = () => {
@@ -31,6 +31,7 @@ const resizeListener = () => {
         (element as HTMLElement).style.height = `calc(100%/${flexRows})`;
     });
 };
+
 
 window.ipc.onProcessEvent((eventType: string, data: any[]) => {
     switch (eventType) {
@@ -70,9 +71,16 @@ window.ipc.onProcessEvent((eventType: string, data: any[]) => {
         }
 
         case "change-all-graph-settings": {
-            for (const { element } of existingStockGraphs) {
-                element.send("change-all-settings", data[0]);
-            }
+            const settings: { [settingName: string]: any } = data[0];
+            const index: number | undefined = data[1];
+
+            if (typeof index === "number") {
+                existingStockGraphs[index].element.send("change-all-settings", settings);
+            } else {
+                for (const { element } of existingStockGraphs) {
+                    element.send("change-all-settings", settings);
+                }
+            } 
             break;
         }
 
@@ -222,14 +230,15 @@ function renderStocksGraphs(data: any[]) {
         `
         stockGridParent.insertAdjacentHTML('beforeend', html);
 
-        const webview: HTMLElement | null = document.getElementById(`chart-${stockAbbr}-${count}`);
+        const webview: WebviewTag | null = document.getElementById(`chart-${stockAbbr}-${count}`) as WebviewTag;
         if (webview) {
             const currentIndex = existingStockGraphs.length
-            const webViewReadyEvent = () => {
-                sendToProcess('webview-ready', currentIndex);
-                webview.removeEventListener("dom-ready", webViewReadyEvent);
-            }
-            webview.addEventListener('dom-ready', webViewReadyEvent);
+            webview.addEventListener("ipc-message", (event) => {
+                if (event.channel === "ready") {
+                    console.log("Received ready from " + currentIndex)
+                    sendToProcess('webview-ready', currentIndex);
+                }
+            })
             existingStockGraphs.push({ element: webview as WebviewTag, eventNameToCssKey: {} });
         }
         count++;

@@ -66,6 +66,7 @@ export default class StocksProcess extends Process {
             case "webview-ready": {
                 const webViewIndex: number = data[0];
                 this.onDisplaySettingChanged(webViewIndex);
+                this.changeDefaultGraphSettings(webViewIndex);
                 break;
             }
             default: {
@@ -76,12 +77,6 @@ export default class StocksProcess extends Process {
     }
 
     public registerSettings(): (Setting<unknown> | string)[] {
-        const dateSettingOptions = [
-            
-        ];
-
-
-
         return [
             new StringSetting(this)
                 .setDefault("NVDA, GOOGL, AMZN, META")
@@ -193,7 +188,6 @@ export default class StocksProcess extends Process {
                 .setDefault("1D")
                 .setName("Date Range")
                 .setAccessID("builtin-date-range"),
-
         ];
     }
 
@@ -234,7 +228,7 @@ export default class StocksProcess extends Process {
         }
     }
 
-    private changeDefaultGraphSettings() {
+    private changeDefaultGraphSettings(index?: number | undefined) {
         const output: { [settingName: string]: any } = {}
         const settingsToRefresh = [
             'builtin-hideOutLiers',
@@ -255,7 +249,7 @@ export default class StocksProcess extends Process {
             }
             output[settingName] = settingValue
         }
-        this.sendToRenderer("change-all-graph-settings", output);
+        this.sendToRenderer("change-all-graph-settings", output, index);
     }
 
 
