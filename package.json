@@ -1,7 +1,4 @@
 {
-  "config": {
-    "react-wrapper-directory": "./src/renderer/react-wrapper"
-  },
   "scripts": {
     "postinstall": "npm install @nexus-app/nexus-client@latest",
     "start": "npm run export:dev && cd ./node_modules/@nexus-app/nexus-client/ && npm start",

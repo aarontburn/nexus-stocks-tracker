@@ -32,11 +32,11 @@ export default class StocksProcess extends Process {
     }
 
     public async onExit(): Promise<void> {
-        const isFirstBootSetting: Setting<unknown> | undefined = this.getSettings().findSetting("is-first-boot");
-        if (isFirstBootSetting?.getValue()) {
-            await isFirstBootSetting.setValue(false);
-            await this.fileManager.writeSettingsToStorage();
-        }
+        // const isFirstBootSetting: Setting<unknown> | undefined = this.getSettings().findSetting("is-first-boot");
+        // if (isFirstBootSetting?.getValue()) {
+        //     await isFirstBootSetting.setValue(false);
+        //     await this.fileManager.writeSettingsToStorage();
+        // }
 
     }
 
@@ -66,6 +66,7 @@ export default class StocksProcess extends Process {
             case "webview-ready": {
                 const webViewIndex: number = data[0];
                 this.onDisplaySettingChanged(webViewIndex);
+                this.changeDefaultGraphSettings(webViewIndex);
                 break;
             }
             default: {
@@ -75,7 +76,6 @@ export default class StocksProcess extends Process {
         }
     }
 
-    // Add settings/section headers.
     public registerSettings(): (Setting<unknown> | string)[] {
         return [
             new StringSetting(this)
@@ -138,7 +138,56 @@ export default class StocksProcess extends Process {
                 .setDefault(false)
                 .setName("Disable Chart Mouse Events")
                 .setDescription("Useful for touchscreen dashboards.")
-                .setAccessID("disable-chart-mouse-events")
+                .setAccessID("disable-chart-mouse-events"),
+
+            "Change All Chart Settings",
+            new BooleanSetting(this)
+                .setDefault(false)
+                .setName("Hide Outliers")
+                .setAccessID("builtin-hideOutLiers"),
+
+            new BooleanSetting(this)
+                .setDefault(false)
+                .setName("Extended Hours")
+                .setAccessID("builtin-extendedHours"),
+
+            new BooleanSetting(this)
+                .setDefault(true)
+                .setName("Show Crosshair")
+                .setAccessID("builtin-showCrosshair"),
+
+            new BooleanSetting(this)
+                .setDefault(false)
+                .setName("Sticky Crosshair")
+                .setAccessID("builtin-stickyCrosshair"),
+
+            new BooleanSetting(this)
+                .setDefault(false)
+                .setName("Gray Background Strips")
+                .setAccessID("builtin-grayBackgroundStrips"),
+
+            new BooleanSetting(this)
+                .setDefault(false)
+                .setName("Range Slider")
+                .setAccessID("builtin-rangeSlider"),
+
+            new ChoiceSetting(this)
+                .addOptions("Linear", "Logarithmic", "Percentage")
+                .setDefault("Linear")
+                .setName("Y-axis Scale")
+                .setAccessID("builtin-linear"),
+
+            new BooleanSetting(this)
+                .setDefault(false)
+                .setName("Invert Graph")
+                .setAccessID("builtin-invert"),
+
+            new ChoiceSetting(this)
+                .addOptions("1D", "5D", "1M", "6M", "YTD", "1Y", "5Y", "All")
+                .useDropdown()
+                .setDefault("1D")
+                .setName("Date Range")
+                .setAccessID("builtin-date-range"),
         ];
     }
 
@@ -173,7 +222,37 @@ export default class StocksProcess extends Process {
                 this.onDisplaySettingChanged();
                 break;
         }
+
+        if (modifiedSetting.getAccessID().startsWith("builtin-")) {
+            this.changeDefaultGraphSettings();
+        }
     }
+
+    private changeDefaultGraphSettings(index?: number | undefined) {
+        const output: { [settingName: string]: any } = {}
+        const settingsToRefresh = [
+            'builtin-hideOutLiers',
+            'builtin-extendedHours',
+            'builtin-showCrosshair',
+            "builtin-stickyCrosshair",
+            'builtin-grayBackgroundStrips',
+            'builtin-rangeSlider',
+            'builtin-invert',
+            'builtin-linear',
+            'builtin-date-range'
+        ];
+        for (const settingName of settingsToRefresh) {
+            const settingValue = this.getSettings().findSetting(settingName)?.getValue();
+            if (settingValue === undefined) {
+                console.error(`[${MODULE_NAME}] Could not locate setting value ${settingName}`);
+                continue;
+            }
+            output[settingName] = settingValue
+        }
+        this.sendToRenderer("change-all-graph-settings", output, index);
+    }
+
+
 
     private onDisplaySettingChanged(webViewIndex?: number) {
         const output: { [settingName: string]: any } = {}
