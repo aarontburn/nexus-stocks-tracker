@@ -1,7 +1,7 @@
 {
     "name": "Stock Tracker",
     "id": "aarontburn.Stock_Tracker",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "author": "aarontburn",
     "description": "Monitor multiple stocks in a dashboard, powered by Yahoo! Finance.",
     "link": "https://github.com/aarontburn/nexus-stocks-tracker",
@@ -16,7 +16,7 @@
         "git-repo-name": "nexus-stocks-tracker"
     },
     "build": {
-        "build-version": 4,
+        "build-version": 5,
         "excluded": [
             "electron.ts"
         ],

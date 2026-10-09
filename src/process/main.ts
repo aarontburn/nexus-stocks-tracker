@@ -140,6 +140,11 @@ export default class StocksProcess extends Process {
                 .setDescription("Useful for touchscreen dashboards.")
                 .setAccessID("disable-chart-mouse-events"),
 
+            new BooleanSetting(this)
+                .setDefault(false)
+                .setName("Autoscroll to End")
+                .setAccessID("autoscroll-to-end"),
+
             "Change All Chart Settings",
             new BooleanSetting(this)
                 .setDefault(false)
@@ -219,6 +224,7 @@ export default class StocksProcess extends Process {
             case "hide-date-controls":
             case "hide-chart-controls":
             case "hide-quote-metadata":
+            case "autoscroll-to-end":
                 this.onDisplaySettingChanged();
                 break;
         }
